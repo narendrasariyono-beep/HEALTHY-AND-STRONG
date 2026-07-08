@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#F8FAFC" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Perbaikan Postur Raihan</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background: #F8FAFC;
+      color: #1E293B;
+      overscroll-behavior: none;
+    }
+    body { overflow: hidden; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+    :root {
+      --background: #F8FAFC;
+      --surface: #F4F3FA;
+      --primary: #93A5CF;
+      --lavender: #D6CBE5;
+      --border-light: #EBE7F3;
+      --text-primary: #1E293B;
+      --text-secondary: #64748B;
+      --text-accent: #7A8CBA;
+      --danger: #EF4444;
+      --danger-bg: rgba(239, 68, 68, 0.03);
+      --danger-border: rgba(239, 68, 68, 0.18);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .app { position: fixed; inset: 0; background: var(--background); overflow: hidden; }
+    .screen {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      background: var(--background); transform: translateX(100%);
+      opacity: 0;
+      transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
+                  opacity 320ms cubic-bezier(0.32, 0.72, 0, 1);
+      overflow: hidden;
+    }
+    .screen.active { transform: translateX(0); opacity: 1; }
+    .screen.exit { transform: translateX(-6%) scale(0.97); opacity: 0; }
+    #screen-home { transform: translateX(0); opacity: 1; }
+    .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Halaman Home */
+    .home-padding { padding: calc(var(--safe-top) + 32px) 24px 48px; text-align: center; }
+    .home-header { margin-bottom: 32px; display: flex; flex-direction: column; gap: 8px; }
+    .home-subtitle { font-size: 13px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-accent); }
+    .home-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 34px; }
+    .day-card {
+      position: relative; display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); border: 1px solid var(--border-light);
+      border-radius: 20px; padding: 16px 20px; margin-bottom: 10px; min-height: 72px; overflow: hidden;
+      box-shadow: 0 8px 16px rgba(30, 41, 59, 0.03);
+      transition: opacity 0.2s, transform 0.2s;
+      animation: cardIn 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
+      text-align: left;
+    }
+    .day-card-left { flex: 1; min-width: 0; }
+    .day-card-title { font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
+    .day-card-focus { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .day-card-right { display: flex; flex-direction: column; align-items: flex-end; margin-left: 16px; }
+    .day-card-date { font-size: 24px; font-weight: 600; letter-spacing: -1px; line-height: 28px; font-variant-numeric: tabular-nums; }
+    .day-card-month { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--text-accent); margin-top: 2px; }
+    .day-card-accent { display: none; }
+    .day-card.is-next { border: 1.5px solid var(--primary); background: #F0F4FB; box-shadow: 0 8px 20px rgba(147,165,207,0.18); }
+    .day-card.is-past { opacity: 0.4; }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .day-card .ripple { position: absolute; border-radius: 50%; background: rgba(147,165,207,0.35); transform: scale(0); animation: rippleAnim 500ms ease-out forwards; pointer-events: none; }
+    @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+
+    /* Halaman Exercise */
+    .top-bar { padding: calc(var(--safe-top) + 12px) 24px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+    .icon-btn:active { opacity: 0.7; }
+    .icon-btn svg { width: 22px; height: 22px; stroke: var(--text-primary); }
+    .progress-text { font-size: 13px; font-weight: 600; letter-spacing: 1.5px; color: var(--text-accent); font-variant-numeric: tabular-nums; }
+    .exercise-content { padding: 16px 24px 200px; transition: opacity 180ms ease, transform 180ms ease; }
+    .exercise-content.fade-out { opacity: 0; transform: translateX(-14px); }
+    .exercise-content.fade-in { opacity: 0; transform: translateX(14px); transition: none; }
+    .exercise-content.fade-in.playing { opacity: 1; transform: translateX(0); transition: opacity 220ms ease, transform 220ms ease; }
+    .exercise-label { font-size: 12px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-accent); margin-bottom: 8px; }
+    .exercise-name { font-size: 30px; font-weight: 700; letter-spacing: -0.8px; line-height: 38px; margin-bottom: 20px; }
+
+    /* Chip Row */
+    .chip-row { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; align-items: center; }
+    .rep-chip { display: inline-flex; align-items: baseline; background: var(--surface); border: 1px solid var(--border-light); padding: 10px 18px; border-radius: 999px; }
+    .rep-chip-num { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+    .rep-chip-mute { font-size: 13px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.5px; margin: 0 4px; }
+    .rest-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--surface); border: 1px solid var(--border-light); padding: 10px 14px; border-radius: 999px; }
+    .rest-chip-icon { width: 14px; height: 14px; stroke: var(--text-accent); flex-shrink: 0; fill: none; }
+    .rest-chip-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.3px; }
+    .rest-chip-val { font-size: 13px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; margin-left: 2px; font-variant-numeric: tabular-nums; }
+
+    /* Video Thumb */
+    .video-thumb { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 20px; overflow: hidden; background: var(--surface); margin-bottom: 28px; cursor: pointer; transition: opacity 0.2s; }
+    .video-thumb:active { opacity: 0.85; }
+    .video-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .video-thumb-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.25); }
+    .play-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 32px; background: rgba(15, 23, 42, 0.85); display: flex; align-items: center; justify-content: center; }
+    .play-circle svg { width: 26px; height: 26px; fill: #FFF; margin-left: 3px; }
+    .video-thumb-badge { position: absolute; bottom: 12px; left: 12px; padding: 4px 10px; background: rgba(255,255,255,0.92); border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .video-placeholder { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: var(--surface); }
+    .video-placeholder svg { width: 36px; height: 36px; stroke: var(--text-accent); opacity: 0.35; fill: none; }
+    .video-placeholder span { font-size: 12px; font-weight: 600; color: var(--text-accent); opacity: 0.55; letter-spacing: 0.5px; }
+
+    /* Info Cards */
+    .info-cards { display: flex; flex-direction: column; gap: 10px; }
+    .info-card { display: flex; align-items: flex-start; gap: 12px; background: var(--surface); border: 1px solid var(--border-light); border-radius: 16px; padding: 14px 16px; }
+    .info-card-danger { background: var(--danger-bg); border-color: var(--danger-border); }
+    .info-card-icon { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .info-card-icon svg { width: 15px; height: 15px; stroke: var(--text-accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .info-card-danger .info-card-icon svg { stroke: var(--danger); }
+    .info-card-content { flex: 1; min-width: 0; }
+    .info-card-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-accent); margin-bottom: 6px; }
+    .info-card-danger .info-card-label { color: var(--danger); }
+    .info-card-text { font-size: 15px; line-height: 23px; color: var(--text-secondary); letter-spacing: -0.1px; }
+
+    /* Bottom Bar */
+    .bottom-bar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--background); padding: 14px 24px calc(var(--safe-bottom) + 16px); border-top: 1px solid var(--border-light); }
+    .lanjut-btn { width: 100%; padding: 18px 20px; border-radius: 16px; background: var(--text-primary); color: #FFF; font-size: 15px; font-weight: 600; letter-spacing: -0.2px; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, transform 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lanjut-btn:active { opacity: 0.85; transform: scale(0.99); }
+    .dot-row { display: flex; justify-content: center; gap: 6px; margin-top: 14px; }
+    .dot { width: 6px; height: 6px; border-radius: 3px; background: var(--border-light); transition: width 0.3s, background 0.3s; }
+    .dot.active { width: 24px; background: var(--primary); }
+
+    /* Cardio metric chip */
+    .metric-chip { display: inline-flex; align-items: baseline; background: var(--surface); border: 1px solid var(--border-light); padding: 10px 18px; border-radius: 999px; }
+    .metric-chip-num { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+    .metric-chip-unit { font-size: 13px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.3px; margin-left: 6px; }
+
+    /* Nutrition section (Home) */
+    .section-label { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-accent); margin: 30px 0 10px; text-align: left; }
+    .nutrition-list { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+
+    /* Selesai message (rest day) */
+    .selesai-message { font-size: 15px; line-height: 23px; color: var(--text-secondary); text-align: center; max-width: 280px; margin: 0 auto; letter-spacing: -0.1px; }
+
+    /* Video Modal */
+    .video-modal {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0);
+      pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 300ms ease;
+    }
+    .video-modal.open { background: rgba(0,0,0,0.65); pointer-events: all; }
+    .video-sheet {
+      width: 80%; aspect-ratio: 16/9; background: #000; border-radius: 16px; overflow: hidden;
+      opacity: 0; transform: scale(0.92);
+      transition: opacity 300ms ease, transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .video-modal.open .video-sheet { opacity: 1; transform: scale(1); }
+    .video-modal-iframe-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .video-modal-iframe-wrap iframe { width: 100%; height: 100%; border: 0; }
+
+    /* Halaman Selesai */
+    .selesai-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(var(--safe-top) + 24px) 32px 24px; }
+    .badge-wrap { width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; margin-bottom: 36px; position: relative; }
+    .badge { width: 110px; height: 110px; border-radius: 55px; background: var(--primary); display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 24px rgba(147,165,207,0.35); animation: badgeBounce 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+    .badge svg { width: 56px; height: 56px; stroke: #FFF; stroke-width: 3; fill: none; }
+    .ring-pulse { position: absolute; width: 110px; height: 110px; border-radius: 55px; border: 2px solid var(--lavender); animation: pulse 1600ms ease-out infinite; animation-delay: 700ms; opacity: 0; }
+    @keyframes badgeBounce { 0% { opacity: 0; transform: scale(0.2); } 60% { opacity: 1; } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes pulse { 0% { opacity: 0.5; transform: scale(1); } 100% { opacity: 0; transform: scale(1.45); } }
+    .selesai-body { display: flex; flex-direction: column; align-items: center; opacity: 0; animation: selesaiFadeIn 400ms ease both; animation-delay: 650ms; }
+    .selesai-title { font-size: 44px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 10px; }
+    .selesai-subtitle { font-size: 16px; font-weight: 500; letter-spacing: -0.2px; color: var(--text-secondary); margin-bottom: 28px; }
+    .alhamdulillah-wrap { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; }
+    .alhamdulillah-line { width: 28px; height: 1px; background: var(--border-light); }
+    .alhamdulillah { font-size: 22px; font-weight: 600; font-style: italic; letter-spacing: -0.5px; color: var(--primary); }
+    .stats-row { display: flex; align-items: center; background: var(--surface); border: 1px solid var(--border-light); border-radius: 20px; padding: 18px 28px; }
+    .stat-box { display: flex; flex-direction: column; align-items: center; min-width: 88px; }
+    .stat-num { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; font-variant-numeric: tabular-nums; }
+    .stat-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-accent); margin-top: 4px; }
+    .stat-divider { width: 1px; height: 36px; background: var(--border-light); margin: 0 24px; }
+    @keyframes selesaiFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .selesai-bottom { padding: 14px 24px calc(var(--safe-bottom) + 16px); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Halaman Home -->
+  <div class="screen active" id="screen-home">
+    <div class="scroll-area">
+      <div class="home-padding">
+        <div class="home-header">
+          <div class="home-subtitle">JULI 2026</div>
+          <div class="home-title">Perbaikan Postur<br/>Raihan</div>
+        </div>
+        <div id="day-cards"></div>
+
+        <div class="section-label">Pilar Nutrisi Harian</div>
+        <div class="nutrition-list">
+          <div class="info-card">
+            <div class="info-card-icon">
+              <svg viewBox="0 0 16 16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.5v4l2.5 1.5"/></svg>
+            </div>
+            <div class="info-card-content">
+              <div class="info-card-label">Target Kalori</div>
+              <div class="info-card-text">1.800–1.900 kkal/hari — defisit untuk memangkas lemak dada & perut.</div>
+            </div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">
+              <svg viewBox="0 0 16 16" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v12M4 5h8M4 11h8"/></svg>
+            </div>
+            <div class="info-card-content">
+              <div class="info-card-label">Target Protein</div>
+              <div class="info-card-text">120–140 gram/hari (dada ayam, telur, tahu/tempe) untuk mempertahankan otot.</div>
+            </div>
+          </div>
+          <div class="info-card info-card-danger">
+            <div class="info-card-icon">
+              <svg viewBox="0 0 16 16"><path d="M8 2.5L14 13.5H2L8 2.5z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <div class="info-card-content">
+              <div class="info-card-label">Pantangan Utama</div>
+              <div class="info-card-text">Stop kalori cair (boba, kopi manis, teh manis). Ganti air putih minimal 3 liter/hari.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Halaman Exercise -->
+  <div class="screen" id="screen-exercise">
+    <div class="top-bar">
+      <button class="icon-btn js-back" id="btn-back" aria-label="Kembali">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="progress-text" id="progress-text">1 / 4</div>
+    </div>
+    <div class="scroll-area">
+      <div class="exercise-content">
+        <div class="exercise-label" id="exercise-label">GERAKAN 1</div>
+        <div class="exercise-name" id="exercise-name">—</div>
+        <div class="chip-row">
+          <div class="rep-chip">
+            <span class="rep-chip-num" id="chip-sets">3</span>
+            <span class="rep-chip-mute">set</span>
+            <span class="rep-chip-num">×</span>
+            <span class="rep-chip-num" id="chip-reps">10</span>
+            <span class="rep-chip-mute" id="chip-unit">rep</span>
+          </div>
+          <div class="rest-chip">
+            <svg class="rest-chip-icon" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <span class="rest-chip-label">istirahat</span>
+            <span class="rest-chip-val" id="chip-istirahat">2 menit</span>
+          </div>
+        </div>
+        <div class="video-thumb" id="video-thumb">
+          <img id="video-thumb-img" alt="Video thumbnail" />
+          <div class="video-placeholder" id="video-placeholder">
+            <svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 8l6 4-6 4V8z"/></svg>
+            <span>Video segera hadir</span>
+          </div>
+          <div class="video-thumb-overlay" id="video-thumb-overlay"></div>
+          <div class="play-circle" id="video-play-circle"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+          <div class="video-thumb-badge" id="video-thumb-badge">YouTube</div>
+        </div>
+        <div class="info-cards">
+          <div class="info-card">
+            <div class="info-card-icon">
+              <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.5" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <div class="info-card-content">
+              <div class="info-card-label">Tujuan</div>
+              <div class="info-card-text" id="tujuan-text">—</div>
+            </div>
+          </div>
+          <div class="info-card info-card-danger">
+            <div class="info-card-icon">
+              <svg viewBox="0 0 16 16"><path d="M8 2.5L14 13.5H2L8 2.5z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <div class="info-card-content">
+              <div class="info-card-label">Kesalahan Fatal</div>
+              <div class="info-card-text" id="kesalahan-text">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="lanjut-btn" id="btn-lanjut">Lanjut →</button>
+      <div class="dot-row" id="dot-row"></div>
+    </div>
+  </div>
+
+  <!-- Halaman Cardio -->
+  <div class="screen" id="screen-cardio">
+    <div class="top-bar">
+      <button class="icon-btn js-back" id="btn-back-cardio" aria-label="Kembali">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="progress-text">CARDIO</div>
+    </div>
+    <div class="scroll-area">
+      <div class="exercise-content">
+        <div class="exercise-label" id="cardio-label">AKTIVITAS</div>
+        <div class="exercise-name" id="cardio-name">—</div>
+        <div class="chip-row">
+          <div class="metric-chip">
+            <span class="metric-chip-num" id="cardio-metric-value">—</span>
+            <span class="metric-chip-unit" id="cardio-metric-unit"></span>
+          </div>
+          <div class="rest-chip">
+            <svg class="rest-chip-icon" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <span class="rest-chip-label">intensitas</span>
+            <span class="rest-chip-val" id="cardio-intensity">—</span>
+          </div>
+        </div>
+        <div class="info-cards">
+          <div class="info-card">
+            <div class="info-card-icon">
+              <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.5" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <div class="info-card-content">
+              <div class="info-card-label">Tujuan</div>
+              <div class="info-card-text" id="cardio-tujuan-text">—</div>
+            </div>
+          </div>
+          <div class="info-card info-card-danger">
+            <div class="info-card-icon">
+              <svg viewBox="0 0 16 16"><path d="M8 2.5L14 13.5H2L8 2.5z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <div class="info-card-content">
+              <div class="info-card-label">Kesalahan Fatal</div>
+              <div class="info-card-text" id="cardio-kesalahan-text">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="lanjut-btn" id="btn-cardio-selesai">Selesai →</button>
+    </div>
+  </div>
+
+  <!-- Halaman Selesai -->
+  <div class="screen" id="screen-selesai">
+    <div class="selesai-container">
+      <div class="badge-wrap">
+        <div class="ring-pulse"></div>
+        <div class="badge"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></div>
+      </div>
+      <div class="selesai-body">
+        <div class="selesai-title" id="selesai-title">Selesai!</div>
+        <div class="selesai-subtitle" id="selesai-subtitle">Latihan Senin · Upper A done ✓</div>
+        <div class="alhamdulillah-wrap">
+          <div class="alhamdulillah-line"></div>
+          <div class="alhamdulillah">Alhamdulillah</div>
+          <div class="alhamdulillah-line"></div>
+        </div>
+        <div class="stats-row" id="selesai-stats-row">
+          <div class="stat-box"><div class="stat-num" id="selesai-stat1-num">4</div><div class="stat-label" id="selesai-stat1-label">GERAKAN</div></div>
+          <div class="stat-divider"></div>
+          <div class="stat-box"><div class="stat-num" id="selesai-stat2-num">12</div><div class="stat-label" id="selesai-stat2-label">TOTAL SET</div></div>
+        </div>
+        <div class="selesai-message" id="selesai-message" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="selesai-bottom">
+      <button class="lanjut-btn" id="btn-kembali">Kembali ke Beranda</button>
+    </div>
+  </div>
+
+  <!-- Video Modal -->
+  <div class="video-modal" id="video-modal" role="dialog" aria-modal="true">
+    <div class="video-sheet">
+      <div class="video-modal-iframe-wrap" id="iframe-wrap"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+  const PROGRAM_YEAR = 2026, PROGRAM_MONTH = 6, MONTH_LABEL = "Juli";
+
+  const WORKOUTS = [
+    { id: "senin",  day: "Senin",  focus: "Gym · Upper Body (Dada & Postur)", type: "gym",    dates: [6, 13, 20, 27] },
+    { id: "selasa", day: "Selasa", focus: "Lari · Easy Jogging",              type: "cardio", dates: [7, 14, 21, 28] },
+    { id: "rabu",   day: "Rabu",   focus: "Gym · Lower Body & Core",          type: "gym",    dates: [1, 8, 15, 22, 29] },
+    { id: "kamis",  day: "Kamis",  focus: "Lari · Recovery Run",              type: "cardio", dates: [2, 9, 16, 23, 30] },
+    { id: "jumat",  day: "Jumat",  focus: "Gym · Full Body & Postur",         type: "gym",    dates: [3, 10, 17, 24, 31] },
+    { id: "sabtu",  day: "Sabtu",  focus: "Lari · Long Easy Run",             type: "cardio", dates: [4, 11, 18, 25] },
+    { id: "minggu", day: "Minggu", focus: "Total Rest",                      type: "rest",   dates: [5, 12, 19, 26] },
+  ];
+
+  const SENIN_EXERCISES = [
+    {
+      id: 1, name: "Dumbbell Bench Press", sets: 4, reps: 10, unit: "rep", ytId: "t1iaVBMItPo", isShorts: false, istirahat: "2 menit",
+      tujuan: "Membangun dan mengencangkan otot dada secara keseluruhan sebagai pondasi kekuatan atas. Gunakan beban yang menantang di 2 repetisi terakhir (target 8–12 rep).",
+      kesalahan: "Bahu naik mendekati telinga saat menurunkan beban — bisa memicu cedera. Tarik dan kunci belikat ke bawah-belakang (retract & depress) sebelum mendorong beban ke atas."
+    },
+    {
+      id: 2, name: "Push-Up (atau Cable/DB Flyes)", sets: 4, reps: 12, unit: "rep", ytId: "i9sTjhN4Z3M", isShorts: false, istirahat: "90 dtk",
+      tujuan: "Melengkapi kerja otot dada dari sudut berbeda sekaligus melatih stabilitas core, dengan beban sendi bahu yang lebih ringan dibanding bench press.",
+      kesalahan: "Pinggul turun (sagging) atau naik terlalu tinggi. Jaga badan lurus satu garis dari kepala sampai tumit, seperti plank yang bergerak."
+    },
+    {
+      id: 3, name: "Lat Pulldown (atau Bent-Over DB Row)", sets: 4, reps: 10, unit: "rep", ytId: "Z4zHIds5nDk", isShorts: true, istirahat: "90 dtk",
+      tujuan: "Memperlebar otot punggung samping (V-Taper) sekaligus menarik bahu kembali ke posisi netral untuk memperbaiki postur bungkuk.",
+      kesalahan: "Mengayunkan badan ke belakang memakai momentum pinggang. Badan harus tetap tegak dan stabil, tarikan murni dari otot punggung."
+    },
+  ];
+
+  const RABU_EXERCISES = [
+    {
+      id: 1, name: "Goblet Squat", sets: 4, reps: 10, unit: "rep", ytId: "BR4tlEE_A98", isShorts: false, istirahat: "2 menit",
+      tujuan: "Melatih otot kaki — kelompok otot terbesar tubuh yang paling banyak membakar kalori — sekaligus membangun teknik squat yang aman.",
+      kesalahan: "Lutut menekuk ke dalam (valgus) saat turun. Jaga lutut selalu sejajar dengan arah jari kaki sepanjang gerakan."
+    },
+    {
+      id: 2, name: "Romanian Deadlift (Dumbbell)", sets: 4, reps: 10, unit: "rep", ytId: "hu3jRvTc_po", isShorts: true, istirahat: "2 menit",
+      tujuan: "Memperkuat paha belakang & bokong sekaligus menarik panggul kembali ke posisi netral, mengimbangi dominasi otot paha depan.",
+      kesalahan: "Punggung bawah melengkung (round back) saat menurunkan beban. Punggung wajib tetap lurus datar, gerakan berpusat pada pinggul yang didorong ke belakang (hip hinge)."
+    },
+    {
+      id: 3, name: "Plank", sets: 3, reps: 40, unit: "detik", ytId: "mwlp75MS6Rg", isShorts: false, istirahat: "45 dtk",
+      tujuan: "Mengencangkan dinding perut (core) secara isometrik untuk menopang postur tulang belakang. Target tahan 30–45 detik per set.",
+      kesalahan: "Pinggul terlalu nungging ke atas atau ambles ke bawah. Badan harus lurus sejajar dari kepala sampai tumit — bayangkan menyeimbangkan segelas air di punggung bawah."
+    },
+  ];
+
+  const JUMAT_EXERCISES = [
+    {
+      id: 1, name: "Dumbbell Overhead Press", sets: 3, reps: 12, unit: "rep", ytId: "rO_iEImwHyo", isShorts: false, istirahat: "90 dtk",
+      tujuan: "Memperkuat otot bahu secara menyeluruh, berguna untuk stabilitas tubuh bagian atas saat berlari dan mengangkat beban sehari-hari.",
+      kesalahan: "Punggung bawah melengkung ke depan karena beban kegedean. Kencangkan perut (brace core) sebelum mendorong beban ke atas kepala."
+    },
+    {
+      id: 2, name: "Dumbbell Lunges (Bergantian Kaki)", sets: 3, reps: 12, unit: "rep", ytId: "_DLIS8SySzs", isShorts: false, istirahat: "90 dtk",
+      tujuan: "Melatih stabilitas kaki satu-per-satu (unilateral) yang sangat berguna untuk kekuatan dan keseimbangan saat berlari.",
+      kesalahan: "Lutut depan maju melewati ujung jari kaki secara ekstrem hingga tumit terangkat. Jaga lutut depan sejajar pergelangan kaki, beban bertumpu di tumit."
+    },
+    {
+      id: 3, name: "Face Pull (atau Band Pull-Apart)", sets: 3, reps: 15, unit: "rep", ytId: "hyBmEmv03_U", isShorts: false, istirahat: "60 dtk",
+      tujuan: "Memperbaiki postur bahu bungkuk dengan melatih otot bahu belakang & belikat secara rutin agar bahu tertarik ke posisi netral.",
+      kesalahan: "Menarik beban hanya menggunakan kekuatan lengan. Fokuskan gerakan pada menjepitkan tulang belikat ke belakang, bukan sekadar menekuk siku."
+    },
+  ];
+
+  const CARDIO_DATA = {
+    selasa: {
+      name: "Lari Santai (Easy Jogging)",
+      metricValue: "20–30", metricUnit: "menit",
+      intensity: "Konstan, abaikan pace",
+      tujuan: "Membakar kalori ekstra untuk mengatasi perut buncit dan mengondisikan kembali sistem kardiovaskularmu setelah lama tidak lari.",
+      kesalahan: "Langsung memaksakan lari dengan pace cepat seperti memori masa sekolah. Ini bisa memicu cedera tulang kering (shin splints) karena tubuhmu saat ini butuh adaptasi terhadap benturan berulang. Lari santai dulu tanpa berhenti, abaikan kecepatan."
+    },
+    kamis: {
+      name: "Lari Recovery (Run-Walk)",
+      metricValue: "25–30", metricUnit: "menit",
+      intensity: "Kombinasi lari 5 menit + jalan 1 menit",
+      tujuan: "Menjaga momentum pembakaran lemak sekaligus melancarkan aliran darah untuk memulihkan otot kaki yang pegal setelah leg day hari Rabu.",
+      kesalahan: "Melangkah terlalu lebar (overstriding) sehingga tumit menghantam tanah terlalu keras. Usahakan langkah kaki jatuh tepat di bawah pinggul secara ringan."
+    },
+    sabtu: {
+      name: "Lari Jarak Menengah (Long Easy Run)",
+      metricValue: "4–5", metricUnit: "km",
+      intensity: "Santai, nikmati prosesnya",
+      tujuan: "Membakar cadangan lemak di akhir pekan dan perlahan mengembalikan performa lari menuju target lama (10K).",
+      kesalahan: "Kurang minum sebelum lari. Di jarak yang mulai lumayan ini, dehidrasi akan membuat detak jantung melonjak terlalu tinggi secara cepat. Pastikan cukup cairan sebelum berangkat."
+    },
+  };
+
+  const SELESAI_INFO = {
+    senin:  { type: "gym",    subtitle: "Latihan Senin · Upper Body done ✓" },
+    selasa: { type: "cardio", subtitle: "Lari Selasa · Easy Jogging done ✓" },
+    rabu:   { type: "gym",    subtitle: "Latihan Rabu · Lower Body & Core done ✓" },
+    kamis:  { type: "cardio", subtitle: "Lari Kamis · Recovery Run done ✓" },
+    jumat:  { type: "gym",    subtitle: "Latihan Jumat · Full Body & Postur done ✓" },
+    sabtu:  { type: "cardio", subtitle: "Lari Sabtu · Long Easy Run done ✓" },
+    minggu: {
+      type: "rest", title: "Istirahat!", subtitle: "Minggu · Waktunya tubuh pulih total 💤",
+      message: "Otot butuh waktu untuk tumbuh dan pulih. Nikmati harimu, hindari kejenuhan fisik maupun mental (burnout)."
+    },
+  };
+
+  function getUpcomingDate(dates) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return dates.find(d => new Date(PROGRAM_YEAR, PROGRAM_MONTH, d).getTime() >= today) || dates[dates.length - 1];
+  }
+
+  function renderHome() {
+    const now = new Date();
+    const todayTs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    let closestDiff = Infinity, closestId = null;
+    WORKOUTS.forEach(w => {
+      const d = getUpcomingDate(w.dates);
+      const ts = new Date(PROGRAM_YEAR, PROGRAM_MONTH, d).getTime();
+      const diff = ts - todayTs;
+      if (diff >= 0 && diff < closestDiff) { closestDiff = diff; closestId = w.id; }
+    });
+
+    document.getElementById("day-cards").innerHTML = WORKOUTS.map((w, idx) => {
+      const upcoming = String(getUpcomingDate(w.dates)).padStart(2, "0");
+      const upcomingTs = new Date(PROGRAM_YEAR, PROGRAM_MONTH, parseInt(upcoming, 10)).getTime();
+      const isPast = upcomingTs < todayTs;
+      const isNext = w.id === closestId;
+      const extraClass = isNext ? " is-next" : isPast ? " is-past" : "";
+      return `
+        <div class="day-card${extraClass}" data-id="${w.id}" style="animation-delay:${idx * 80}ms">
+          <div class="day-card-left">
+            <div class="day-card-title">${w.day}</div>
+            <div class="day-card-focus">${w.focus}</div>
+          </div>
+          <div class="day-card-right">
+            <div class="day-card-date">${upcoming}</div>
+            <div class="day-card-month">${MONTH_LABEL}</div>
+          </div>
+          <div class="day-card-accent"></div>
+        </div>`;
+    }).join("");
+
+    document.querySelectorAll(".day-card").forEach(el => {
+      el.addEventListener("click", e => {
+        const rect = el.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        const ripple = document.createElement("span");
+        ripple.className = "ripple";
+        ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
+        el.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 520);
+        const id = el.dataset.id;
+        const w = WORKOUTS.find(x => x.id === id);
+        setTimeout(() => {
+          if (w.type === "gym") location.hash = "#/" + id + "/1";
+          else if (w.type === "cardio") location.hash = "#/" + id + "/cardio";
+          else location.hash = "#/" + id + "/selesai";
+        }, 120);
+      });
+    });
+  }
+
+  function getExercises(hari) {
+    if (hari === "rabu")  return RABU_EXERCISES;
+    if (hari === "jumat") return JUMAT_EXERCISES;
+    return SENIN_EXERCISES;
+  }
+
+  function renderExercise(idNum, exercises, hari) {
+    const ex = exercises.find(e => e.id === idNum);
+    if (!ex) { location.hash = "#/"; return; }
+    const total = exercises.length;
+
+    document.getElementById("progress-text").textContent = idNum + " / " + total;
+    document.getElementById("exercise-label").textContent = "GERAKAN " + idNum;
+    document.getElementById("exercise-name").textContent = ex.name;
+    document.getElementById("chip-sets").textContent = ex.sets;
+    document.getElementById("chip-reps").textContent = ex.reps;
+    document.getElementById("chip-unit").textContent = ex.unit || "rep";
+    document.getElementById("chip-istirahat").textContent = ex.istirahat;
+    document.getElementById("tujuan-text").textContent = ex.tujuan;
+    document.getElementById("kesalahan-text").textContent = ex.kesalahan;
+
+    const hasVideo = !!ex.ytId;
+    document.getElementById("video-thumb-img").style.display = hasVideo ? "block" : "none";
+    if (hasVideo) document.getElementById("video-thumb-img").src = "https://img.youtube.com/vi/" + ex.ytId + "/hqdefault.jpg";
+    document.getElementById("video-placeholder").style.display = hasVideo ? "none" : "flex";
+    document.getElementById("video-thumb-overlay").style.display = hasVideo ? "block" : "none";
+    document.getElementById("video-play-circle").style.display = hasVideo ? "flex" : "none";
+    document.getElementById("video-thumb-badge").textContent = ex.isShorts ? "YouTube Shorts" : "YouTube";
+    document.getElementById("video-thumb-badge").style.display = hasVideo ? "block" : "none";
+    document.getElementById("video-thumb").dataset.ytId = ex.ytId || "";
+    document.getElementById("video-thumb").style.cursor = hasVideo ? "pointer" : "default";
+
+    const isLast = idNum === total;
+    const next = isLast ? null : exercises.find(e => e.id === idNum + 1);
+    const btn = document.getElementById("btn-lanjut");
+    btn.textContent = isLast ? "Selesai →" : ("Lanjut → " + next.name);
+    btn.dataset.target = isLast ? "selesai" : String(idNum + 1);
+    btn.dataset.hari = hari;
+
+    document.getElementById("dot-row").innerHTML = exercises.map(e =>
+      '<div class="dot' + (e.id === idNum ? " active" : "") + '"></div>'
+    ).join("");
+    document.querySelector("#screen-exercise .scroll-area").scrollTop = 0;
+  }
+
+  function renderCardio(hari) {
+    const data = CARDIO_DATA[hari];
+    if (!data) { location.hash = "#/"; return; }
+    document.getElementById("cardio-name").textContent = data.name;
+    document.getElementById("cardio-metric-value").textContent = data.metricValue;
+    document.getElementById("cardio-metric-unit").textContent = data.metricUnit;
+    document.getElementById("cardio-intensity").textContent = data.intensity;
+    document.getElementById("cardio-tujuan-text").textContent = data.tujuan;
+    document.getElementById("cardio-kesalahan-text").textContent = data.kesalahan;
+    document.getElementById("btn-cardio-selesai").dataset.hari = hari;
+    document.querySelector("#screen-cardio .scroll-area").scrollTop = 0;
+  }
+
+  function renderSelesai(hari) {
+    const info = SELESAI_INFO[hari];
+    if (!info) { location.hash = "#/"; return; }
+    document.getElementById("selesai-title").textContent = info.title || "Selesai!";
+    document.getElementById("selesai-subtitle").textContent = info.subtitle;
+
+    const statsRow = document.getElementById("selesai-stats-row");
+    const msgEl = document.getElementById("selesai-message");
+
+    if (info.type === "gym") {
+      const exercises = getExercises(hari);
+      const totalSets = exercises.reduce((sum, e) => sum + e.sets, 0);
+      document.getElementById("selesai-stat1-num").textContent = exercises.length;
+      document.getElementById("selesai-stat1-label").textContent = "GERAKAN";
+      document.getElementById("selesai-stat2-num").textContent = totalSets;
+      document.getElementById("selesai-stat2-label").textContent = "TOTAL SET";
+      statsRow.style.display = "flex";
+      msgEl.style.display = "none";
+    } else if (info.type === "cardio") {
+      const data = CARDIO_DATA[hari];
+      document.getElementById("selesai-stat1-num").textContent = data.metricValue;
+      document.getElementById("selesai-stat1-label").textContent = data.metricUnit.toUpperCase();
+      document.getElementById("selesai-stat2-num").textContent = "✓";
+      document.getElementById("selesai-stat2-label").textContent = "TUNTAS";
+      statsRow.style.display = "flex";
+      msgEl.style.display = "none";
+    } else {
+      statsRow.style.display = "none";
+      msgEl.textContent = info.message;
+      msgEl.style.display = "block";
+    }
+  }
+
+  const screens = {
+    home: document.getElementById("screen-home"),
+    exercise: document.getElementById("screen-exercise"),
+    cardio: document.getElementById("screen-cardio"),
+    selesai: document.getElementById("screen-selesai"),
+  };
+
+  function showScreen(name) {
+    const current = Object.values(screens).find(s => s.classList.contains("active"));
+    const next = screens[name];
+    if (current && current !== next) {
+      current.classList.add("exit");
+      setTimeout(() => current.classList.remove("active", "exit"), 340);
+    }
+    next.classList.add("active");
+    if (name === "selesai") {
+      const badge = next.querySelector(".badge");
+      const body  = next.querySelector(".selesai-body");
+      const ring  = next.querySelector(".ring-pulse");
+      [badge, body, ring].forEach(el => { el.style.animation = "none"; el.offsetHeight; el.style.animation = ""; });
+    }
+  }
+
+  function handleRoute() {
+    const hash = location.hash || "#/";
+    if (hash === "#/" || hash === "") {
+      showScreen("home");
+      return;
+    }
+
+    const selesaiMatch = hash.match(/^#\/(senin|selasa|rabu|kamis|jumat|sabtu|minggu)\/selesai$/);
+    if (selesaiMatch) {
+      renderSelesai(selesaiMatch[1]);
+      showScreen("selesai");
+      return;
+    }
+
+    const cardioMatch = hash.match(/^#\/(selasa|kamis|sabtu)\/cardio$/);
+    if (cardioMatch) {
+      renderCardio(cardioMatch[1]);
+      showScreen("cardio");
+      return;
+    }
+
+    const gymMatch = hash.match(/^#\/(senin|rabu|jumat)\/(\d+)$/);
+    if (gymMatch) {
+      const hari = gymMatch[1];
+      const idNum = parseInt(gymMatch[2], 10);
+      const exercises = getExercises(hari);
+      if (idNum >= 1 && idNum <= exercises.length) {
+        renderExercise(idNum, exercises, hari);
+        showScreen("exercise");
+        return;
+      }
+    }
+
+    location.hash = "#/";
+  }
+
+  const modal     = document.getElementById("video-modal");
+  const iframeWrap = document.getElementById("iframe-wrap");
+
+  function openVideo(ytId) {
+    iframeWrap.innerHTML = '<iframe src="https://www.youtube.com/embed/' + ytId + '?autoplay=1&playsinline=1&rel=0&modestbranding=1" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>';
+    modal.classList.add("open");
+  }
+  function closeVideo() {
+    modal.classList.remove("open");
+    setTimeout(() => { iframeWrap.innerHTML = ""; }, 300);
+  }
+
+  modal.addEventListener("click", e => { if (e.target === modal) closeVideo(); });
+  document.getElementById("video-thumb").addEventListener("click", () => {
+    const ytId = document.getElementById("video-thumb").dataset.ytId;
+    if (ytId) openVideo(ytId);
+  });
+
+  document.querySelectorAll(".js-back").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (history.length > 1) history.back(); else location.hash = "#/";
+    });
+  });
+
+  document.getElementById("btn-lanjut").addEventListener("click", e => {
+    const t    = e.currentTarget.dataset.target;
+    const hari = e.currentTarget.dataset.hari;
+    if (t === "selesai") { location.hash = "#/" + hari + "/selesai"; return; }
+    if (!t) return;
+    const content = document.querySelector("#screen-exercise .exercise-content");
+    content.classList.add("fade-out");
+    setTimeout(() => {
+      location.hash = "#/" + hari + "/" + t;
+      content.classList.remove("fade-out");
+      content.classList.add("fade-in");
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        content.classList.add("playing");
+        setTimeout(() => content.classList.remove("fade-in", "playing"), 250);
+      }));
+    }, 180);
+  });
+
+  document.getElementById("btn-cardio-selesai").addEventListener("click", e => {
+    const hari = e.currentTarget.dataset.hari;
+    if (hari) location.hash = "#/" + hari + "/selesai";
+  });
+
+  document.getElementById("btn-kembali").addEventListener("click", () => location.hash = "#/");
+
+  renderHome();
+  window.addEventListener("hashchange", handleRoute);
+  handleRoute();
+</script>
+</body>
+</html>
